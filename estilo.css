@@ -1,0 +1,18 @@
+h1, h2, h3, h4, h5, h6 { color: #25292a; margin: 0px 0px 10px 0px; font-family: 'Overpass', sans-serif; font-weight: 700; letter-spacing: -1px; line-height: 1; }
+h4 { font-size: 20px; }
+.page-header1 { background: url(https://i.redd.it/2wlbn479xgo21.png)no-repeat; position: relative; background-size: cover; }
+.page-caption1 { padding-top: 170px; padding-bottom: 174px; }
+.page-title1 { font-size: 46px; line-height: 1; color: #fff; font-weight: 600; text-align: center; }
+
+/*post img and comments*/
+.img-post {border-radius:6px; margin:auto;}
+
+.comment{
+    margin-right: 20px;
+    margin-left: 20px; 
+    margin-bottom: 30px;
+}
+
+.hr-blank {
+  border-width: 0px;
+}

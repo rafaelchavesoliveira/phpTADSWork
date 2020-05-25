@@ -1,0 +1,192 @@
+<?php
+// Carrega e conecta o banco de dados
+  $date = date('d/m/Y');
+
+  require "db_credentials.php";
+  require "sanitize.php";
+  // Create connection
+  $conn = mysqli_connect($servername, $username, $password, $dbname);
+  // Check connection
+  if (!$conn) {
+      die("Connection failed: " . mysqli_connect_error());
+  }
+// Verifica se a requisicao e para criar um novo post
+  if($_SERVER["REQUEST_METHOD"] == "POST")
+  {
+    if(isset($_POST["postTitulo"]) && isset($_POST["postSubTitulo"]) && isset($_POST["corpo"]) && !empty($_POST["postTitulo"]) && !empty($_POST["postSubTitulo"]) && !empty($_POST["corpo"]))
+    {
+      $postTitulo    = sanitize($_POST["postTitulo"]);
+      $postSubTitulo = sanitize($_POST["postSubTitulo"]);
+      $corpo         = sanitize($_POST["corpo"]);
+
+      $sql = "INSERT INTO Post (titulo, subtitulo, corpoPost, data_criado)
+              VALUES ('$postTitulo', '$postSubTitulo', '$corpo', '$date')";
+
+
+      if(!mysqli_query($conn, $sql))
+      {
+        die("Problemas para inserir novo post no BD<br>" .mysqli_error($conn));
+      }
+    }
+  }
+// verifica se a requisicao e para deletar o post
+  if($_SERVER["REQUEST_METHOD"] == "POST")
+  {
+    if(isset($_POST["postId"]) && isset($_POST["action"]))
+    {
+        $idDel = sanitize($_POST["postId"]);
+        $actionDel = sanitize($_POST["action"]);
+        
+        $sql = "DELETE FROM Comentario WHERE FK_IdPost=$idDel";
+        if(!mysqli_query($conn, $sql))
+        {
+          die("Problemas para deletar post no BD<br>" .mysqli_error($conn));
+        }
+
+        $sql = "DELETE FROM Post WHERE idPost=$idDel";
+        if(!mysqli_query($conn, $sql))
+        {
+          die("Problemas para deletar post no BD<br>" .mysqli_error($conn));
+        }
+        header("refresh: 3, url = https://www.google.com.br");
+    }
+  }
+// verifica a quantidade de post a ser carregado
+  $sql = "SELECT idPost, titulo, subtitulo, corpoPost, data_criado FROM Post";
+  if(!($posts = mysqli_query($conn, $sql)))
+  {
+    die("Problemas para carregar os posts do BD!<br>" . mysqli_error($conn));
+  }
+  $rowsPost = mysqli_num_rows($posts);
+
+  mysqli_close($conn);
+?>
+
+
+<!doctype html>
+<html>
+  <head>
+    <!-- carregar bibliotecas -->
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet" id="bootstrap1-css">
+    <link href="estilo.css" rel="stylesheet" id="bootstrap-css"> 
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+    <script src="//code.jquery.com/jquery-1.11.1.min.js"></script>
+  </head>
+   
+   <!-- page-header -->
+   <body>
+     <header>
+        <div class="page-header1">
+            <div class="container">
+                <div class="row">
+                    <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-12">
+                        <div class="page-caption1">
+                            <h1 class="page-title1">
+                              <a href=/index.html>Blog Simples </a>
+                            </h1>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+     </header>
+
+    <hr class="hr-blank">
+    <!-- POSTS --> 
+    <div class="container">
+      <!-- verifica a quantidade de post -->
+    <?php if ($rowsPost == 0): ?>
+      Não há nenhum post!Aproveite e comece agora!
+    <?php else: ?>
+      <?php while($post = mysqli_fetch_assoc($posts)): ?>
+        <!-- Criacao dinamica de post -->
+        <div class="well">
+          <form id="link_<?= $post["idPost"];?>" action="/post.html" method="POST">
+        <div class="media">
+          <a class="pull-left" href="/post.html">
+            <input type="hidden" name="postId" value="<?= $post["idPost"];?>" />
+            <img class="img-post" src="http://placekitten.com/150/150">
+          </a>
+          <div class="media-body">
+            <h4 class="media-heading" > <a href="#" onclick="document.getElementById('link_<?= $post["idPost"];?>').submit();"><?= $post["titulo"];?></a></h4>
+            <p class="text-right">Autor Equipe Fulano</p>
+            <p><?= $post["subtitulo"];?></p>
+            <ul class="list-inline list-unstyled">
+              <li><span><i class="glyphicon glyphicon-calendar"></i><?= $post["data_criado"];?></span></li>
+              <li>|</li>
+              <span><i class="glyphicon glyphicon-comment"></i> <?php getCommentsNumber($post["idPost"]); ?>  comments</span>
+              <li>|</li>
+              <button type="button" class="btn btn-danger" onclick="toDelete(<?= $post["idPost"];?>);">Delete</button>
+            </ul>
+          </div>
+        </div>
+        </form>
+      </div>
+      <!-- final do dinamico -->
+    <?php endwhile; ?>
+    <?php endif; ?>  
+    
+    <!-- novo post -->
+    <div class="container">
+    <div class="row">
+      <h2><div class="pull-right"><a href="#" id="addaPost" class="btn btn-primary">Novo Post</a> </div></h2>
+    </div>
+    <div class="row" id="addPost" style="display: none;">
+      <form id="postForm" action="<?= $SERVER['PHP_SELF'] ?>" method="POST">
+        <input type="text" placeholder="Digite o título do post..." class="form-control" name="postTitulo" id="postTitulo"><br/>
+        <input type="text" placeholder="Digite o subtitulo do post..." class="form-control" name="postSubTitulo" id="postSubTitulo"><br/>
+        <textarea class="form-control" placeholder="Conteúdo do Post..." name="corpo" id="corpo"></textarea><br/>
+        <button class="btn btn-primary" onclick="IsEmpty();">Send</button>
+      </form>
+    </div>
+    <hr>
+
+  <script language="Javascript">
+    $(document).on('click', '#addaPost', function()
+    {
+      $('#addPost').toggle();
+    });
+
+    function IsEmpty()
+    { 
+      var a=document.forms["postForm"]["postTitulo"].value;
+      var b=document.forms["postForm"]["postSubTitulo"].value;
+      var c=document.forms["postForm"]["corpo"].value;
+
+      if(a==null || a=="" || b==null || b=="" || c==null || c=="")
+      {
+        alert("Todos os campos são obrigatorios");
+        return false;
+      }
+    };
+
+    function toDelete(x)
+    {
+      document.forms["link_"+x].action = "/index.html";
+      $.post("<?= $SERVER['PHP_SELF'] ?>", { postId: x, action: "delete" }); 
+    }
+
+  </script>
+  <?php
+    function getCommentsNumber($num1)
+    {
+      require "db_credentials.php";
+      // Create connection
+      $conn = mysqli_connect($servername, $username, $password, $dbname);
+      // Check connection
+      if (!$conn) {
+          die("Connection failed: " . mysqli_connect_error());
+      }
+      
+      $sqlCom = "SELECT idCom from Comentario WHERE FK_IdPost=$num1";
+      if(!($comments = mysqli_query($conn, $sqlCom)))
+      {
+        die("Não foi possivel carregar o número de comentários!<br>" . mysqli_error($conn));
+      }
+      $numComments = mysqli_num_rows($comments);
+      echo $numComments;
+    }
+  ?>
+  </body>
+</html>

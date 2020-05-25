@@ -1,0 +1,146 @@
+<?php  
+  $date = date('d/m/Y');
+
+  require "db_credentials.php";
+  require "sanitize.php";
+  // Create connection
+  $conn = mysqli_connect($servername, $username, $password, $dbname);
+  // Check connection
+  if (!$conn) {
+      die("Connection failed: " . mysqli_connect_error());
+  }
+  //Carregar post selecionado da tela anterior
+  if($_SERVER["REQUEST_METHOD"] == "POST")
+  {
+    if(isset($_POST["postId"]))
+    {
+      $postId = $_POST["postId"];
+      $sql = "SELECT idPost, titulo, subtitulo, corpoPost, data_criado FROM Post WHERE idPost=$postId";
+      if(!($posts = mysqli_query($conn, $sql)))
+      {
+        die("Problemas para carregar os posts do BD!<br" . mysqli_error($conn));
+      }
+      $post = mysqli_fetch_assoc($posts);
+    }
+    //verificar insercao de novo comentario
+    if(isset($_POST["nome_comentario"]) && isset($_POST["comentario"]) && !empty($_POST["nome_comentario"]) && !empty($_POST["comentario"]))
+    {
+      $nome_comentario = sanitize($_POST["nome_comentario"]);
+      $comentario = sanitize($_POST["comentario"]);
+
+      $sql = "INSERT INTO Comentario (nome, corpoComentario, dataComentario, FK_Idpost)
+              VALUES ('$nome_comentario', '$comentario','$date', '$postId')";
+
+      if(!mysqli_query($conn, $sql))
+      {
+        die("Problemas para inserir novo comentario no BD<br>" .mysqli_error($conn));
+      }
+    }
+// ver numero de comentarios
+    $sql = "SELECT idCom, nome, corpoComentario, dataComentario, FK_IdPost FROM Comentario WHERE FK_Idpost=$postId"; 
+    if(!($comments = mysqli_query($conn, $sql)))
+    {
+      die("Problemas para carregar os comentários do BD!<br" . mysqli_error($conn));
+    }
+
+    $rowsComments = mysqli_num_rows($comments);
+
+  }
+
+  mysqli_close($conn);
+?>
+
+<!doctype html>
+<html>
+  <head>
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet" id="bootstrap1-css">
+    <link href="estilo.css" rel="stylesheet" id="bootstrap-css"> 
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+    <script src="//code.jquery.com/jquery-1.11.1.min.js"></script>
+  </head>
+   
+   <!-- page-header -->
+   <body>
+     <header>
+        <div class="page-header1">
+            <div class="container">
+                <div class="row">
+                    <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-12">
+                        <div class="page-caption1">
+                            <h1 class="page-title1">
+                            <a href=/index.html>Blog Simples </a>
+                            </h1>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+     </header>
+
+     <hr class="hr-blank">
+
+    <!-- conteudo post--> 
+    <div class="container">
+      <div class="row">
+        <div class="col-md-10 mx-auto">
+          <h1 class="section-heading"><?= $post["titulo"];?></h1>
+          <img class="img-post" src="http://placekitten.com/150/150">
+            <p><?= $post["corpoPost"];?></p>       
+        </div>
+      </div>
+    </div>
+
+    <hr class='hr-blank'>
+    <!-- comentarios -->
+
+  <div class="container">
+    <div class="row">
+      <h2>Comentários<div class="pull-right"><a href="#" id="addacomment" class="btn btn-primary">Add a coment</a> </div></h2>
+    </div>
+    <div class="row" id="addcomment" style="display: none;">
+      <form id="commentsForm" action="<?= $SERVER['PHP_SELF'] ?>" method="POST">
+        <input type="hidden" name="postId" value="<?= $post["idPost"];?>" />
+        <input type="text" placeholder="Nome.." class="form-control" name="nome_comentario" id="nome_comentario"><br/>
+        <textarea class="form-control" placeholder="Comentário..." name="comentario" id="cometario"></textarea><br/>
+        <button class="btn btn-primary" onclick="IsEmpty();">Send</button>
+      </form>
+    </div>
+    <hr>
+    <?php if ($rowsComments == 0): ?>
+      Não há nenhum Comentário!Aproveite e comece agora!
+    <?php else: ?>
+      <?php while($comentario = mysqli_fetch_assoc($comments)): ?>
+        <div class="row comment">
+          <div class="head">
+          <small><strong class='user'> <?= $comentario["nome"];?> </strong> <?= $comentario["dataComentario"];?> </small>
+          </div>    
+            <p><?= $comentario["corpoComentario"];?></p>
+        </div>
+      <?php endwhile; ?>
+    <?php endif; ?> 
+    <hr>
+  </div>
+
+  <script language="Javascript">
+    $(document).on('click', '#addacomment', function()
+    {
+      $('#addcomment').toggle();
+    });
+
+    function IsEmpty()
+    { 
+      var a=document.forms["commentsForm"]["nome_comentario"].value;
+      var b=document.forms["commentsForm"]["comentario"].value;
+
+      if(a==null || a=="" || b==null || b=="")
+      {
+        alert("Todos os campos são obrigatorios");
+        return false;
+      }
+    }
+
+  </script>
+
+  </body>
+</html>
